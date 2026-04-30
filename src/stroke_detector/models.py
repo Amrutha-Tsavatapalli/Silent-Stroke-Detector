@@ -13,6 +13,7 @@ class FaceAnalysis:
     confidence: float
     risk_score: float
     landmark_count: int
+    quality: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass

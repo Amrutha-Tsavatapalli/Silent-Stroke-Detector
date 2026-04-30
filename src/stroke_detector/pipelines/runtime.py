@@ -39,6 +39,7 @@ class StrokeDetectionRuntime:
                 "mouth_tilt_score": face.mouth_tilt_score,
                 "confidence": face.confidence,
                 "landmark_count": face.landmark_count,
+                "quality": face.quality,
             },
             "voice": {
                 "pitch_variance": voice.pitch_variance,

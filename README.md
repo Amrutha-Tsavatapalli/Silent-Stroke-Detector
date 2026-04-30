@@ -20,7 +20,7 @@ An end-to-end prototype scaffold for a phone-camera-driven stroke risk screening
 
 ## Quick start
 
-### 1. Python app
+### 1. Python app (Streamlit demo)
 
 ```bash
 python -m venv .venv
@@ -28,6 +28,22 @@ python -m venv .venv
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+### 1b. Python API (FastAPI endpoints)
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn api_server:app --reload --port 8000
+```
+
+Endpoints:
+
+- GET /api/health
+- POST /api/analyze
+- POST /api/face/analyze
+- POST /api/voice/analyze
 
 ### 2. Node backend
 
