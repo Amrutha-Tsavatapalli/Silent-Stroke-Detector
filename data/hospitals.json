@@ -1,0 +1,23 @@
+[
+  {
+    "name": "District Government Hospital",
+    "city": "Chennai",
+    "phone": "+91-44-10000001",
+    "lat": 13.0827,
+    "lon": 80.2707
+  },
+  {
+    "name": "Government Medical College Hospital",
+    "city": "Madurai",
+    "phone": "+91-452-1000002",
+    "lat": 9.9252,
+    "lon": 78.1198
+  },
+  {
+    "name": "Taluk Headquarters Hospital",
+    "city": "Salem",
+    "phone": "+91-427-1000003",
+    "lat": 11.6643,
+    "lon": 78.1460
+  }
+]
