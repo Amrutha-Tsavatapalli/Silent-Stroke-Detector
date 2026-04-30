@@ -1,10 +1,13 @@
 streamlit>=1.44.0
+streamlit-webrtc>=0.47.0
 numpy>=1.26.0
 pandas>=2.2.0
 opencv-python>=4.10.0
 mediapipe>=0.10.0
 librosa>=0.10.2
 soundfile>=0.12.1
+sounddevice>=0.4.6
 scikit-learn>=1.4.0
 joblib>=1.4.0
 requests>=2.32.0
+av>=10.0.0

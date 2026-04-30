@@ -1,0 +1,13 @@
+{
+  "database-url-var": "DATABASE_URL",
+  "migrations-dir": "migrations",
+  "dir": "migrations",
+  "migration-file-language": "js",
+  "migration-filename-format": "utc",
+  "check-order": true,
+  "create-schema": true,
+  "create-migrations-schema": false,
+  "single-transaction": true,
+  "decamelize": false,
+  "ignore-pattern": "\\..*"
+}
