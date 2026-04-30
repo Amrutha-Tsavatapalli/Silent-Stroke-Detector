@@ -1,35 +1,47 @@
-import React from "react";
+import React, { useState } from "react";
 import ScanPanel from "../components/ScanPanel";
 import RiskMeter from "../components/RiskMeter";
 import Insights from "../components/Insights";
 import Emergency from "../components/Emergency";
 
 export default function Dashboard() {
+  const [result, setResult] = useState({
+    risk: 0,
+    alert: false,
+  });
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen p-6 md:p-10 space-y-6 fade-in">
 
-      <h1 className="text-4xl font-bold text-cyan-400">
-        🧠 Silent Stroke AI
-      </h1>
+      {/* Title */}
+      <h1 className="text-3xl md:text-5xl font-bold text-blue-700" style={{ textAlign: "center" }}>
+  🧠 Silent Stroke AI
+</h1>
 
+      {/* Top Section */}
       <div className="grid md:grid-cols-2 gap-6">
+        
         <div className="glass">
-          <ScanPanel />
+          <ScanPanel setResult={setResult} />
         </div>
 
-        <div className="glass text-center">
-          <RiskMeter />
+        <div className="glass flex items-center justify-center">
+          <RiskMeter risk={result.risk} />
         </div>
+
       </div>
 
+      {/* Bottom Section */}
       <div className="grid md:grid-cols-2 gap-6">
+
         <div className="glass">
-          <Insights />
+          <Insights result={result} />
         </div>
 
-        <div className="glass border border-red-500">
-          <Emergency />
+        <div className="glass border-l-4 border-red-400">
+          <Emergency alert={result.alert} />
         </div>
+
       </div>
 
     </div>
