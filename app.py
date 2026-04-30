@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import io
-from pathlib import Path
 
 import cv2
 import numpy as np
 import streamlit as st
 
+from src.stroke_detector.api.backend_client import BackendApiClient
 from src.stroke_detector.config import AppConfig
 from src.stroke_detector.pipelines.runtime import StrokeDetectionRuntime
 from src.stroke_detector.reports.generator import ReportGenerator
@@ -36,6 +36,7 @@ def main() -> None:
     config = AppConfig()
     runtime = StrokeDetectionRuntime(config)
     report_generator = ReportGenerator()
+    backend_client = BackendApiClient(config)
 
     st.title("Silent Stroke Detector")
     st.caption(
@@ -60,6 +61,14 @@ def main() -> None:
 
         patient_name = st.text_input("Patient name", value="Anonymous")
         location = st.text_input("Location", value="Rural household")
+        persist_result = st.toggle(
+            "Save screening to backend",
+            value=config.persist_to_backend,
+            help="Persists the result to the Express backend and Railway Postgres when available.",
+        )
+        backend_url = st.text_input("Backend API URL", value=config.backend_api_url)
+        config.backend_api_url = backend_url
+        config.persist_to_backend = persist_result
         st.info(
             "This scaffold defaults to a rule-based risk score. "
             "Drop in trained models later without changing the UI flow."
@@ -146,6 +155,14 @@ def main() -> None:
         st.subheader("Emergency Report")
         report_text = report_generator.generate_markdown(result)
         st.markdown(report_text)
+
+        if config.persist_to_backend:
+            save_response = backend_client.save_screening(result, report_excerpt=report_text[:1200])
+            if save_response.ok:
+                st.success(f"Saved to backend. Screening ID: {save_response.payload.get('screeningId', 'n/a')}")
+            else:
+                st.warning(f"Backend persistence skipped: {save_response.error}")
+
         st.download_button(
             "Download report",
             data=io.BytesIO(report_text.encode("utf-8")),

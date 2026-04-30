@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 artifacts/
 *.joblib
+node_modules/
+.env
+backend/.env
