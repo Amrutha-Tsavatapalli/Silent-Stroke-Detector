@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Government General Hospital Khammam",
+    "lat": 17.2473,
+    "lon": 80.1514,
+    "has_thrombolysis": true,
+    "phone": "08742-223456"
+  },
+  {
+    "name": "Area Hospital Kothagudem",
+    "lat": 17.5543,
+    "lon": 80.6196,
+    "has_thrombolysis": true,
+    "phone": "08744-242222"
+  },
+  {
+    "name": "Government Hospital Sathupalli",
+    "lat": 17.1167,
+    "lon": 80.8167,
+    "has_thrombolysis": false,
+    "phone": "08742-272100"
+  },
+  {
+    "name": "NIMS Hyderabad",
+    "lat": 17.4126,
+    "lon": 78.4071,
+    "has_thrombolysis": true,
+    "phone": "040-23489000"
+  },
+  {
+    "name": "Osmania General Hospital Hyderabad",
+    "lat": 17.3840,
+    "lon": 78.4739,
+    "has_thrombolysis": true,
+    "phone": "040-24600150"
+  }
+]
