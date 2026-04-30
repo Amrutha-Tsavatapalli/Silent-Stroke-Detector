@@ -1,4 +1,17 @@
-# Silent Stroke Detector
+# ⚠️ Legacy Repository - Migration Complete
+
+This repository has been migrated to a modern architecture. The legacy Python ML pipeline and Node.js backend have been archived.
+
+## New Stack
+
+- **Frontend/PWA**: [client/](client/) - Run with `npm run dev`
+- **API Server**: [server/](server/) - Run with `npm start`
+
+For API migration details, see [docs/LEGACY_API_MAPPING.md](docs/LEGACY_API_MAPPING.md)
+
+---
+
+# Silent Stroke Detector (Legacy)
 
 An end-to-end prototype scaffold for a phone-camera-driven stroke risk screening app.
 

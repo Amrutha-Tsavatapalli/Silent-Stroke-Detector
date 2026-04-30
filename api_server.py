@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 from dataclasses import asdict
 from typing import Any
 
 import cv2
 import numpy as np
 import soundfile as sf
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field
 
 from src.stroke_detector.api.backend_client import BackendApiClient
@@ -20,6 +22,9 @@ from src.stroke_detector.reports.generator import ReportGenerator
 from src.stroke_detector.utils.demo_data import build_demo_audio, build_demo_image
 from src.stroke_detector.vision.asymmetry import FaceAsymmetryAnalyzer
 
+# Configure logging for deprecation warnings
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="Silent Stroke Detector API", version="0.1.0")
 
 app.add_middleware(
@@ -29,6 +34,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class DeprecationMiddleware(BaseHTTPMiddleware):
+    """Middleware to add deprecation headers to all responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Add deprecation headers to all responses
+        response.headers["Deprecation"] = "true"
+        response.headers["Link"] = "</api/v1/migration>; rel=\"deprecation\""
+        response.headers["Sunset"] = "Sat, 30 Oct 2026 00:00:00 GMT"
+
+        # Log deprecation warning for API calls (excluding health and migration endpoints)
+        if request.url.path not in ("/api/health", "/api/v1/migration", "/docs", "/openapi.json"):
+            logger.warning(
+                f"Deprecated API endpoint called: {request.url.path} "
+                f"- This API will be sunset on 2026-10-30"
+            )
+
+        return response
+
+
+app.add_middleware(DeprecationMiddleware)
 
 
 class AnalyzeRequest(BaseModel):
@@ -108,6 +137,22 @@ def health() -> dict[str, Any]:
         "status": "ok",
         "app": "Silent Stroke Detector",
         "version": "0.1.0",
+    }
+
+
+@app.get("/api/v1/migration")
+def migration_guide() -> dict[str, Any]:
+    """Migration guide endpoint for deprecated API users."""
+    return {
+        "message": "This API is deprecated",
+        "sunset_date": "2026-10-30",
+        "new_api": "http://localhost:3001/api",
+        "migration_guide": "/docs/MIGRATION.md",
+        "endpoints": {
+            "/api/analyze": "Use POST /api/sessions and PWA face/speech screens",
+            "/api/face/analyze": "Use PWA FaceScan screen",
+            "/api/voice/analyze": "Use PWA SpeechCheck screen",
+        },
     }
 
 

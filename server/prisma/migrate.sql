@@ -118,3 +118,287 @@ END;
 $$;
 
 COMMIT;
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Add geohash column and index for spatial indexing
+-- Requirements: 5.3, 5.4, 5.5
+-- ─────────────────────────────────────────────────────────────────────────────
+
+BEGIN;
+
+-- Add geohash column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   information_schema.columns
+    WHERE  table_schema = 'public'
+    AND    table_name   = 'hospitals'
+    AND    column_name  = 'geohash'
+  ) THEN
+    ALTER TABLE hospitals ADD COLUMN geohash TEXT;
+  END IF;
+END;
+$$;
+
+-- Create geohash index if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_indexes
+    WHERE  schemaname = 'public'
+    AND    tablename  = 'hospitals'
+    AND    indexname  = 'idx_hospitals_geohash'
+  ) THEN
+    CREATE INDEX idx_hospitals_geohash ON hospitals(geohash);
+  END IF;
+END;
+$$;
+
+-- Create geohash prefix index for prefix matching
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_indexes
+    WHERE  schemaname = 'public'
+    AND    tablename  = 'hospitals'
+    AND    indexname  = 'idx_hospitals_geohash_prefix'
+  ) THEN
+    CREATE INDEX idx_hospitals_geohash_prefix ON hospitals(SUBSTRING(geohash FROM 1 FOR 4));
+  END IF;
+END;
+$$;
+
+-- Populate geohash column for existing hospitals (if empty)
+-- This uses a simple geohash encoding approximation
+DO $$
+DECLARE
+  h RECORD;
+  new_geohash TEXT;
+BEGIN
+  -- Only populate if geohash column exists and has NULL values
+  IF EXISTS (
+    SELECT 1
+    FROM   information_schema.columns
+    WHERE  table_schema = 'public'
+    AND    table_name   = 'hospitals'
+    AND    column_name  = 'geohash'
+  ) THEN
+    
+    FOR h IN SELECT id, lat, lng FROM hospitals WHERE geohash IS NULL OR geohash = '' LOOP
+      -- Simple geohash approximation using base32 encoding
+      -- This is a simplified version - in production you'd use a proper geohash library
+      new_geohash := (
+        SELECT string_agg(
+          SUBSTRING('0123456789bcdefghjkmnpqrstuvwxyz' FROM 
+            ((
+              ((
+                (h.lng + 180) / 360 * 32)::int << 4
+              ) | (
+                (h.lat + 90) / 180 * 32)::int
+              ) >> (5 * (6 - generate_series))) & 31
+            ) + 1
+          , 1)
+        )
+        FROM generate_series(0, 5)
+      );
+      
+      UPDATE hospitals SET geohash = new_geohash WHERE id = h.id;
+    END LOOP;
+    
+  END IF;
+END;
+$$;
+
+COMMIT;
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Add alert_configs table for tracking alert configuration and delivery status
+-- Requirements: 6.4, 6.5
+-- ─────────────────────────────────────────────────────────────────────────────
+
+BEGIN;
+
+-- Create alert_configs table if it doesn't exist
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   information_schema.tables
+    WHERE  table_schema = 'public'
+    AND    table_name   = 'alert_configs'
+  ) THEN
+    CREATE TABLE alert_configs (
+      id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id          UUID        NOT NULL REFERENCES scan_sessions(id),
+      hospital_id         UUID        REFERENCES hospitals(id),
+      emergency_phone     TEXT        NOT NULL,
+      whatsapp_webhook_url TEXT,
+      sms_webhook_url     TEXT,
+      sent_at             TIMESTAMPTZ,
+      status              TEXT        NOT NULL DEFAULT 'pending',
+      message_id          TEXT,
+      created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT chk_alert_configs_status CHECK (status IN ('pending', 'sent', 'failed', 'delivered'))
+    );
+  END IF;
+END
+$;
+
+-- Create index on session_id for quick lookups
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_indexes
+    WHERE  schemaname = 'public'
+    AND    tablename  = 'alert_configs'
+    AND    indexname  = 'idx_alert_configs_session'
+  ) THEN
+    CREATE INDEX idx_alert_configs_session ON alert_configs(session_id);
+  END IF;
+END
+$;
+
+-- Create index on status for filtering
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_indexes
+    WHERE  schemaname = 'public'
+    AND    tablename  = 'alert_configs'
+    AND    indexname  = 'idx_alert_configs_status'
+  ) THEN
+    CREATE INDEX idx_alert_configs_status ON alert_configs(status);
+  END IF;
+END
+$;
+
+COMMIT;
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Expand scan_sessions table for telemetry
+-- Requirements: 11.1, 11.2
+-- ─────────────────────────────────────────────────────────────────────────────
+
+BEGIN;
+
+-- Add raw_face_scores JSONB column if it doesn't exist
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   information_schema.columns
+    WHERE  table_schema = 'public'
+    AND    table_name   = 'scan_sessions'
+    AND    column_name  = 'raw_face_scores'
+  ) THEN
+    ALTER TABLE scan_sessions ADD COLUMN raw_face_scores JSONB;
+  END IF;
+END
+$;
+
+-- Add raw_speech_scores JSONB column if it doesn't exist
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   information_schema.columns
+    WHERE  table_schema = 'public'
+    AND    table_name   = 'scan_sessions'
+    AND    column_name  = 'raw_speech_scores'
+  ) THEN
+    ALTER TABLE scan_sessions ADD COLUMN raw_speech_scores JSONB;
+  END IF;
+END
+$;
+
+-- Add raw_arm_scores JSONB column if it doesn't exist
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   information_schema.columns
+    WHERE  table_schema = 'public'
+    AND    table_name   = 'scan_sessions'
+    AND    column_name  = 'raw_arm_scores'
+  ) THEN
+    ALTER TABLE scan_sessions ADD COLUMN raw_arm_scores JSONB;
+  END IF;
+END
+$;
+
+-- Add processing_time_ms INTEGER column if it doesn't exist
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   information_schema.columns
+    WHERE  table_schema = 'public'
+    AND    table_name   = 'scan_sessions'
+    AND    column_name  = 'processing_time_ms'
+  ) THEN
+    ALTER TABLE scan_sessions ADD COLUMN processing_time_ms INTEGER;
+  END IF;
+END
+$;
+
+-- Add CHECK constraint for processing_time_ms if not exists
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_constraint
+    WHERE  conname = 'chk_sessions_processing_time'
+  ) THEN
+    ALTER TABLE scan_sessions ADD CONSTRAINT chk_sessions_processing_time 
+      CHECK (processing_time_ms IS NULL OR processing_time_ms >= 0);
+  END IF;
+END
+$;
+
+-- Create GIN indexes for JSONB columns if they don't exist
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_indexes
+    WHERE  schemaname = 'public'
+    AND    tablename  = 'scan_sessions'
+    AND    indexname  = 'idx_scan_sessions_raw_face_scores'
+  ) THEN
+    CREATE INDEX idx_scan_sessions_raw_face_scores ON scan_sessions USING GIN(raw_face_scores);
+  END IF;
+END
+$;
+
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_indexes
+    WHERE  schemaname = 'public'
+    AND    tablename  = 'scan_sessions'
+    AND    indexname  = 'idx_scan_sessions_raw_speech_scores'
+  ) THEN
+    CREATE INDEX idx_scan_sessions_raw_speech_scores ON scan_sessions USING GIN(raw_speech_scores);
+  END IF;
+END
+$;
+
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM   pg_indexes
+    WHERE  schemaname = 'public'
+    AND    tablename  = 'scan_sessions'
+    AND    indexname  = 'idx_scan_sessions_raw_arm_scores'
+  ) THEN
+    CREATE INDEX idx_scan_sessions_raw_arm_scores ON scan_sessions USING GIN(raw_arm_scores);
+  END IF;
+END
+$;
+
+COMMIT;

@@ -38,6 +38,14 @@ def main() -> None:
     report_generator = ReportGenerator()
     backend_client = BackendApiClient(config)
 
+    # Deprecation banner
+    st.error(
+        "⚠️ **DEPRECATION NOTICE**: This Streamlit application will be archived on or around October 30, 2026. "
+        "Please use the new FAST Check PWA at http://localhost:5173 (or production URL when available). "
+        "See migration guide at /docs/MIGRATION.md",
+        icon="🚨"
+    )
+
     st.title("Silent Stroke Detector")
     st.caption(
         "Demo pipeline for multimodal stroke-risk screening using face asymmetry and speech cues."
